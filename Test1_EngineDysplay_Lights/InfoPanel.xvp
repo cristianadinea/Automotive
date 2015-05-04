@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<Panel Type="Vector.CANalyzer.Panels.PanelSerializer, Vector.CANalyzer.Panels.Serializer, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null">
+  <Object Type="Vector.CANalyzer.Panels.Runtime.Panel, Vector.CANalyzer.Panels.Common, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="Panel" Children="Controls" ControlName="Info Panel">
+    <Object Type="Vector.CANalyzer.Panels.Design.StaticTextControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="StaticTextControl2" Children="Controls" ControlName="Static Text 2">
+      <Property Name="Name">StaticTextControl2</Property>
+      <Property Name="Size">33, 13</Property>
+      <Property Name="Location">22, 153</Property>
+      <Property Name="Text">Go to</Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.PanelButtonControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="PanelButtonControl2" Children="Controls" ControlName="Panel Control Button 2">
+      <Property Name="Name">PanelButtonControl2</Property>
+      <Property Name="Size">78, 23</Property>
+      <Property Name="Location">184, 148</Property>
+      <Property Name="PanelList">1;1;InsidePanel1.xvp</Property>
+      <Property Name="Text">Inside View</Property>
+      <Property Name="TabIndex">3</Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.PanelButtonControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="PanelButtonControl1" Children="Controls" ControlName="Panel Control Button">
+      <Property Name="Name">PanelButtonControl1</Property>
+      <Property Name="Size">78, 23</Property>
+      <Property Name="Location">74, 148</Property>
+      <Property Name="PanelList">1;1;Panel6.xvp</Property>
+      <Property Name="Text">Outside View</Property>
+      <Property Name="TabIndex">2</Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.StaticTextControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="StaticTextControl1" Children="Controls" ControlName="Static Text">
+      <Property Name="Name">StaticTextControl1</Property>
+      <Property Name="Size">186, 78</Property>
+      <Property Name="Location">95, 20</Property>
+      <Property Name="Font">Microsoft Sans Serif, 8.25pt, style=Bold</Property>
+      <Property Name="Text">In order to start the simulation, 
+you must first start the ignition 
+and adjust the tyre data and 
+gear ratios if needed,otherwise 
+the default values will be used
+ </Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.PictureBoxControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="PictureBoxControl4" ControlName="Picture Box 3">
+      <Property Name="Name">PictureBoxControl4</Property>
+      <Property Name="Size">67, 73</Property>
+      <Property Name="Location">22, 20</Property>
+      <Property Name="ImageFile">Bitmaps\Info.bmp</Property>
+    </Object>
+    <Property Name="Name">Panel</Property>
+    <Property Name="Size">345, 204</Property>
+  </Object>
+</Panel>

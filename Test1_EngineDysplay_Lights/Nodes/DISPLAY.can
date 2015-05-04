@@ -1,0 +1,212 @@
+/*@@var:*/
+variables
+{
+
+int i;
+char warnText[45] ="Tyre Circumference not computed!press<Show>" ;
+float wheel_dist =1.0;
+float actSpeed;
+float actRPM;
+float this_simulation_distance; //distance computed in this simulation
+float gearRatio;
+float gear;
+float speedMTemp;
+float differential = 4.1;
+float speedM;
+float tyre;
+
+mstimer timerEngTemp;
+mstimer timerWarn;
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_ENGINE (0x0):*/
+on message MSG_ENGINE
+{
+  @PetrolLevel = $MSG_ENGINE::SIGNAL_PETROL_LEVEL ;
+  @EngTemp = $MSG_ENGINE::SIGNAL_ENGINE_TEMP ;
+  if(@EngTemp >=100)
+     { setTimer(timerWarn,0);  }
+  else
+    { @EnvWarLight =0; 
+      cancelTimer(timerWarn);}
+  if(@PetrolLevel ==0)
+    { setTimer(timerEngTemp,0);}
+  else
+    { @EnvFuelLight=0;
+       cancelTimer(timerEngTemp);}
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_LIGHTS (0x2):*/
+on message MSG_LIGHTS
+{
+if (this.dir == RX)
+{
+  if(@Ignition==1)
+    {  setLights(this.SIGNAL_HAZARD_STATE,this.SIGNAL_LEFTINDICATOR_STATE,this.SIGNAL_RIGHTINDICATOR_STATE);}
+   else
+    {  write("Ignition not on!!!!!!!!!!!");
+       @LeftIndicatorFront=0;
+       @LeftIndicatorBack=0;
+       @RightIndicatorFront=0;
+    }
+}
+
+else
+{ write("Error while receiving MSG_LIGHTS!!!!");}
+
+}
+/*@@end*/
+
+/*@@caplFunc:setLights(int,int,int):*///function
+void setLights (int hazardLights,int leftInd, int rightInd)
+{
+    
+    if(hazardLights)
+     {
+       @LeftIndicatorFront=7;
+       @LeftIndicatorBack=2;
+       @RightIndicatorFront =7;
+     }
+
+     else
+     {
+      
+      if(leftInd) //indicator left is pressed
+       {
+        @LeftIndicatorFront=7;
+        @LeftIndicatorBack=2;
+        @RightIndicatorFront=4;
+       }
+      
+      else
+      {   
+        if(rightInd)
+         {
+           @LeftIndicatorFront=4;
+           @RightIndicatorFront=7;
+           @LeftIndicatorBack=1;
+         }
+        else
+        {
+          @LeftIndicatorFront=4;
+          @RightIndicatorFront=4;
+          @LeftIndicatorBack=1;
+        }
+      }
+     }
+   }
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_WIPER (0x4):*/
+on message MSG_WIPER
+{
+
+if (this.dir == RX)
+{
+  if(@Ignition==1)
+   { setWiper(this.SIGNAL_WIPER_POSITION); }
+  else
+   { @WiperWindow=0; }
+}
+
+else
+{ write("Error while receiving MSG_WIPER!!!! "); }
+
+}
+/*@@end*/
+
+/*@@caplFunc:setWiper(int):*///function
+setWiper (int stat)
+{
+
+@WiperWindow = stat;
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_GEAR (0x6):*/
+on message MSG_GEAR
+{
+
+gear = getSignal(SIGNAL_GEAR_SPEED);
+actRPM = getSignal(SIGNAL_ENGINE_RPM);
+
+switch(gear)
+{
+
+case 0: gearRatio = 0.0; break;
+case 1: gearRatio = @GearRatio1; break;
+case 2: gearRatio = @GearRatio2; break;
+case 3: gearRatio = @GearRatio3; break;
+case 4: gearRatio = @GearRatio4; break;
+case 5: gearRatio = @GearRatio5; break;
+case 6: gearRatio = @GearRatio6; break;
+default: gearRatio = 0.0; 
+
+}
+
+tyre= @TyreDiameter;
+if(actRPM!=0)
+  { if(gearRatio !=0)
+     { if(@TyreDiameter!=0)
+        {  write("writeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee from display for the car formulaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+           speedM=@SpeedMeter;
+           write("value of the speed meter before formla  %f",speedM);
+
+           speedM =  speedM+ @GearMode *(( actRPM / gearRatio/differential)* @TyreDiameter)/ 1000000 * 60;
+
+           write("value of the speed meter after formla  %f, where actRPM %f gearRatio %f differential %f tyre circumference %d ",speedM,actRPM,gearRatio,differential,@TyreDiameter);      
+           if(speedM>220) //upper bound
+             {speedM  =220;}
+           //speedMTemp= speedM/20;
+           @SpeedMeter= speedM; 
+            write("writeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee from display for the car formulaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        }
+        else
+        { putValue(WarnTire,warnText); }
+      }
+     else
+     {  
+       }//gearRatio=0
+   }
+}
+/*@@end*/
+
+/*@@startStart:Start:*/
+on start
+{
+@EnvWarLight = 0;
+@EnvFuelLight=0;
+
+
+}
+/*@@end*/
+
+/*@@timer:timerWarn:*/
+on timer timerWarn
+{
+
+if(@EnvWarLight ==1)
+   {@EnvWarLight=0;}
+else
+   {@EnvWarLight=1;}
+setTimer(this,10);
+
+}
+/*@@end*/
+
+/*@@timer:timerEngTemp:*/
+on timer timerEngTemp
+{
+if(@EnvFuelLight ==1)
+   { @EnvFuelLight=0;}
+ else
+   { @EnvFuelLight=1;}
+setTimer(this,10);
+
+}
+/*@@end*/
+

@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<Panel Type="Vector.CANalyzer.Panels.PanelSerializer, Vector.CANalyzer.Panels.Serializer, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null">
+  <Object Type="Vector.CANalyzer.Panels.Runtime.Panel, Vector.CANalyzer.Panels.Common, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="Panel" Children="Controls" ControlName="Front View">
+    <Object Type="Vector.CANalyzer.Panels.Design.SwitchControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="SwitchControl1" ControlName="Switch/Indicator">
+      <Property Name="Name">SwitchControl1</Property>
+      <Property Name="Size">180, 96</Property>
+      <Property Name="Location">209, 31</Property>
+      <Property Name="StateCnt">33</Property>
+      <Property Name="SwitchValues">1;33;0;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32</Property>
+      <Property Name="ImageFile">Bitmaps\WiperANDWater.bmp</Property>
+      <Property Name="SymbolConfiguration">4;1;flfcrd_test1_db;;;WiperWindow;1;;;-1</Property>
+      <Property Name="TabIndex">79</Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.SwitchControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="SwitchControl4" ControlName="Switch/Indicator 2">
+      <Property Name="Name">SwitchControl4</Property>
+      <Property Name="Size">60, 89</Property>
+      <Property Name="Location">391, 22</Property>
+      <Property Name="StateCnt">12</Property>
+      <Property Name="SwitchValues">1;12;0;1;2;3;4;5;6;7;8;9;10;11</Property>
+      <Property Name="TransparentColor">MediumBlue</Property>
+      <Property Name="ImageFile">Bitmaps\FrontWindFINALDOWN.png</Property>
+      <Property Name="SymbolConfiguration">4;1;flfcrd_test1_db;;;FrontWindDown;1;;;-1</Property>
+      <Property Name="TabIndex">78</Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.SwitchControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="SwitchControl2" ControlName="SwitchControl2">
+      <Property Name="Name">SwitchControl2</Property>
+      <Property Name="Size">42, 99</Property>
+      <Property Name="Location">104, 150</Property>
+      <Property Name="StateCnt">8</Property>
+      <Property Name="SwitchValues">1;8;0;1;2;3;4;5;6;7</Property>
+      <Property Name="ImageFile">Bitmaps\VCarFlashLightRight.bmp</Property>
+      <Property Name="SymbolConfiguration">4;1;flfcrd_test1_db;;;RightIndicatorFront;1;;;-1</Property>
+      <Property Name="TabIndex">76</Property>
+      <Property Name="ReadOnlyControl">True</Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.SwitchControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="SwitchControl3" ControlName="SwitchControl3">
+      <Property Name="Name">SwitchControl3</Property>
+      <Property Name="Size">98, 78</Property>
+      <Property Name="Location">258, 182</Property>
+      <Property Name="StateCnt">8</Property>
+      <Property Name="SwitchValues">1;8;0;1;2;3;4;5;6;7</Property>
+      <Property Name="ImageFile">Bitmaps\VCarFlashLightLeft.bmp</Property>
+      <Property Name="SymbolConfiguration">4;1;flfcrd_test1_db;;;LeftIndicatorFront;1;;;-1</Property>
+      <Property Name="TabIndex">77</Property>
+      <Property Name="ReadOnlyControl">True</Property>
+    </Object>
+    <Object Type="Vector.CANalyzer.Panels.Design.PictureBoxControl, Vector.CANalyzer.Panels.CommonControls, Version=7.6.68.0, Culture=neutral, PublicKeyToken=null" Name="PictureBoxControl1" ControlName="PictureBoxControl1">
+      <Property Name="Name">PictureBoxControl1</Property>
+      <Property Name="Size">532, 357</Property>
+      <Property Name="Location">0, 0</Property>
+      <Property Name="ImageFile">Bitmaps\VCar.bmp</Property>
+    </Object>
+    <Property Name="Name">Panel</Property>
+    <Property Name="Size">533, 357</Property>
+  </Object>
+</Panel>

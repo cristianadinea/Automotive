@@ -1,0 +1,346 @@
+/*@@var:*/
+variables
+{
+
+MESSAGE TEST_MSG_ENGINE_REQ_MAN msgengReq;
+MESSAGE TEST_MSG_ENGINE_RES_MAN msgengRes;
+
+}
+/*@@end*/
+
+/*@@envVar:DiagButton4:*/
+on envVar DiagButton4
+{
+
+   dword newServCheckup;
+   newServCheckup = @DiagInput2; 
+   msgengReq.byte(0)=0x032;
+   msgengReq.byte(1)=0x002;
+   msgengReq.dword(2)= @DiagInput2 ;
+   write("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+   write("new service ckeckup : %d ", newServCheckup);
+   write("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+   output(msgengReq);
+}
+/*@@end*/
+
+/*@@envVar:DiagButton3:*/
+on envVar DiagButton3
+{
+   word newSerNo;
+   newSerNo = @DiagInput1; 
+   
+   
+   msgengReq.byte(0)=0x032;
+   msgengReq.byte(1)=0x001;
+   msgengReq.word(2)= newSerNo ;
+   write("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+   write("new serial no : %d ", newSerNo);
+   write("message serial no : %d ", msgengReq.word(2));
+   write("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+   msgengReq.byte(4)=0x000;
+   msgengReq.byte(5)=0x000; 
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+   output(msgengReq);
+}
+/*@@end*/
+
+/*@@envVar:DiagButton2:*/
+on envVar DiagButton2
+{
+  byte byte0RQ;
+  byte byte1RQ;
+  byte byte0R;
+  byte byte1R;
+  byte byte2R;
+  byte byte3R;
+  dword byte23;
+   
+  if(@this ==1)
+  {
+  
+  msgengReq.byte(0)=0x022;
+  msgengReq.byte(1)=0x002;
+  msgengReq.byte(2)=0x000;
+  msgengReq.byte(3)=0x000;
+  msgengReq.byte(4)=0x000;
+  msgengReq.byte(5)=0x000; 
+  msgengReq.byte(6)=0x000;
+  msgengReq.byte(7)=0x000;
+  msgengReq.can=1;
+  output(msgengReq);
+   
+  }
+
+  /*
+  byte2R = msgengRes.BYTE(2);
+  byte3R = msgengRes.BYTE(3);
+  
+  write("-----------------------------------------------Manual Diagnosis Read  RPM Test -------------------------------------------------------------------");
+
+  write("MESSAGE REQUEST FROM TEST id %x byte0 %X  byte1 %X ",msgengReq.ID,msgengReq.byte(0),msgengReq.byte(1));
+  write("MESSAGE RESPONSE FROM TEST id %x byte2 %x  byte3 %x  ",msgengRes.ID,msgengRes.byte(2),byte2R);
+
+  write("-----------------------------------------------------------------------------------------------------------------------");
+    
+  @DiagOutput2 = msgengRes.word(2); //to reverse the byte order
+  */
+
+ 
+
+}
+/*@@end*/
+
+/*@@envVar:DiagButton1:*/
+on envVar DiagButton1
+{
+ 
+ byte byte0RQ;
+ byte byte1RQ;
+ byte byte0R;
+ byte byte1R;
+ byte byte2R;
+ byte byte3R;
+ word byte23;
+ int byteNo, byteNo1;
+
+
+ if(@this ==1) //pressed button
+ {
+
+
+  msgengReq.byte(0)=0x022;
+  msgengReq.byte(1)=0x001;
+  msgengReq.byte(2)=0x000;
+  msgengReq.byte(3)=0x000;
+  msgengReq.byte(4)=0x000;
+  msgengReq.byte(5)=0x000; 
+  msgengReq.byte(6)=0x000;
+  msgengReq.byte(7)=0x000;
+  msgengReq.can=1;
+  output(msgengReq);
+
+ }
+ 
+
+
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::TEST_MSG_ENGINE_RES_MAN (0xA):*/
+on message TEST_MSG_ENGINE_RES_MAN
+{
+ 
+ byte byte1;
+ byte byte0;
+ byte byte0RQ;
+ byte byte1RQ;
+ byte byte0R;
+ byte byte1R;
+ byte byte2R;
+ byte byte3R;
+ word byte23;
+ int byteNo, byteNo1;
+  
+ msgengRes=this;
+ byte2R = msgengRes.BYTE(2);
+ byte3R = msgengRes.BYTE(3);
+ 
+ write("-----------------------------------------------Manual Diagnosis Read Serial Number Test-------------------------------------------------------------------");
+ write("MESSAGE REQUEST FROM TEST id %x byte0 %X  byte1 %X ",msgengReq.ID,msgengReq.byte(0),msgengReq.byte(1));
+ write("MESSAGE RESPONSE FROM TEST id %x byte2 %d  byte3 %d ",msgengRes.ID, byte2R,byte3R);
+ write("-----------------------------------------------------------------------------------------------------------------------");
+
+  //set the environment variable
+   
+ byte1 = this.byte(1);
+ byte0 = this.byte(0);
+
+write("inainte sa intru in switch byte 0 %x byte 1 %x ", byte0 , byte1);
+
+switch(byte0)
+{
+
+case 0x052:{break;} 
+
+case 0x062:{
+           //read test 
+    switch(byte1)
+     {
+      case 0x001: {    write("am intrat pe ramura care trebuia");
+                       //@DiagOutput1 = byte2R * 0x100 + byte3R;  
+                       @DiagOutput1= this.word(2);
+                       @DiagTestStatusImg1 =1;
+                       break;
+                       }
+      case 0x002: { @DiagOutput2 = msgengRes.word(2);
+                    @DiagTestStatusImg2 =1;
+       
+        break;}
+      default: write("am intrat pe primul default") ;
+     }//switch
+
+     break;
+    }
+ 
+case 0x072:
+{
+
+ switch(byte1)
+  {
+   case 0x001:{ @DiagTestStatusImg3 =1;break; }
+   case 0x002:{ @DiagTestStatusImg4 =1;break; }
+   case 0x003:{  if( (this.byte(1)==0x7F) && (this.byte(2) ==12) )
+                      { @DiagTestStatusImg5 =0;} 
+               break; }
+  }
+ break;
+
+}
+
+ 
+ default: write("am intrat pe  al doilea default") ;
+ 
+ }
+
+
+ }
+/*@@end*/
+
+/*@@envVar:DiagChgSesD:*/
+on envVar DiagChgSesD
+{
+
+//choose to change to default session
+if(@this==1)
+ {
+  @DiagChgSesP = 0  ; //programming session disabled
+  msgengReq.byte(0)=0x012;
+  msgengReq.byte(1)=0x001;
+  msgengReq.byte(2)=0x001; // default session =1
+  msgengReq.byte(3)=0x000;
+  msgengReq.byte(4)=0x000;
+  msgengReq.byte(5)=0x000; 
+  msgengReq.byte(6)=0x000;
+  msgengReq.byte(7)=0x000;
+  msgengReq.can=1;
+  output(msgengReq);
+ }
+
+}
+/*@@end*/
+
+/*@@envVar:DiagChgSesP:*/
+on envVar DiagChgSesP
+{
+
+
+if(@this ==1)
+{
+  @DiagChgSesD =0;
+
+  msgengReq.byte(0)=0x012;
+  msgengReq.byte(1)=0x001;
+  msgengReq.byte(2)=0x002; // programming session =2
+  msgengReq.byte(3)=0x000;
+  msgengReq.byte(4)=0x000;
+  msgengReq.byte(5)=0x000; 
+  msgengReq.byte(6)=0x000;
+  msgengReq.byte(7)=0x000;
+  msgengReq.can=1;
+  output(msgengReq);
+}
+ 
+
+
+
+}
+/*@@end*/
+
+/*@@startStart:Start:*/
+on start
+{
+@DiagChgSesD = 1;
+@DiagChgSesP = 0;
+
+}
+/*@@end*/
+
+/*@@caplFunc:decToHeX(int,int):*///function
+void decToHeX (int numberD, int numberX)
+{
+
+int n,r[10],i,j;
+i=0;
+j=0;
+
+while(numberD>0)
+{
+r[i]=numberD%16;
+numberD=numberD/16;
+i++;
+j++;
+}
+
+for(i=j-1;i>=0;i--)
+{
+//if(r[i]==10);
+//numberX= "A";
+//else 
+//  if(r[i]==11);
+//numberX="B";
+//else 
+// if(r[i]==12);
+//numberX="C";
+//else 
+// if(r[i]==13);
+//numberX="D";
+//else 
+// if(r[i]==14);
+//numberX="E";
+//else 
+// if(r[i]==15);
+//numberX="F";
+//else
+//numberX=r[i];
+}
+
+
+write("");
+
+}
+/*@@end*/
+
+/*@@caplFunc:hexToDec(int):*///function
+void hexToDec (int a)
+{
+
+
+}
+/*@@end*/
+
+/*@@envVar:DiagButton5:*/
+on envVar DiagButton5
+{
+
+dword newProcType;
+newProcType = @DiagInput3; 
+msgengReq.byte(0)=0x032;
+msgengReq.byte(1)=0x003;
+msgengReq.dword(2)= @DiagInput3 ;
+   write("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+   write("new service ckeckup : %d ", newProcType);
+   write("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+   output(msgengReq);
+}
+/*@@end*/
+

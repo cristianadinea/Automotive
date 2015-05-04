@@ -1,0 +1,268 @@
+/*@@var:*/
+variables
+{
+
+dword gCycCheckId;
+
+dword glbHandle = 0; //file handle
+long resWait;
+
+byte byte0RQ;
+byte byte1RQ;
+byte byte0R;
+byte byte1R;
+byte byte2R;
+byte byte0;
+
+MESSAGE TEST_MSG_ENGINE_REQ msgengReq;
+MESSAGE TEST_MSG_ENGINE_RES msgengRes;
+
+
+}
+/*@@end*/
+
+/*@@mainTest:MainTest():*/
+void MainTest()
+{
+  
+  //preconditions
+  //  TestWaitForMessage(0x050,10000); //wait for response
+  // if(resWait)
+  // { write(" msgReq byte0 %X      msgRes byte0 %X", msgengReq.byte(0) ,msgengRes.byte(0));}
+  // else
+  //   { write("message not arrived"); }
+  // TestWaitForTimeout(15000);
+
+   write("*****************************");
+   write(" Engine Validation Test");
+   write("*****************************");
+   write(" ");
+
+
+  TestGroupBegin("Message Read", "Check the engine ID and RPM");
+              
+               TestCase4();
+
+  TestGroupEnd(); 
+
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::TEST_MSG_ENGINE_RES (0x50):*/
+on message TEST_MSG_ENGINE_RES
+{
+
+msgengRes=this;
+
+}
+/*@@end*/
+
+/*@@testcase:TestCase4():*/
+testcase TestCase4 ()
+{
+
+  byte byte0RQ;
+  byte byte1RQ;
+  byte byte0R;
+  byte byte1R;
+  byte byte2R;
+  byte byte0;
+  dword byte23;
+
+
+  write("````````````````````````````````````````TEST CASE 4````````````````````````````````````");
+  TestCaseTitle("ID_4","1.4 - Write Service - Write Last Service Checkup -");
+  TestCaseDescription("Write the last service checkup ");
+  
+  
+  ///////////////////////////////////////////////////////////////////////////////
+  //------------------------------ TEST STEPS -----------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
+
+  
+  //----------------------
+  //---- PRECONDITION ---- 
+  //----------------------
+    
+  //----------------------
+  //----- TEST STEP ------
+  //----------------------
+
+  //start default  session
+  //send change session message request
+   
+   msgengReq.byte(0)=0x012;
+   msgengReq.byte(1)=0x001;
+   msgengReq.byte(2)=0x001; // default session =1
+   msgengReq.byte(3)=0x000;
+   msgengReq.byte(4)=0x000;
+   msgengReq.byte(5)=0x000; 
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+   output(msgengReq);
+  
+  write("change session req  sent!!!!!!!!!!");
+   if( 1 != TestWaitForMessage(80, 10000) )
+	{
+	   TestStepFail("Diagnosis Response timed out");
+	}
+   else
+    {
+      if(msgengRes.byte(0)== 0x052) //positive response
+       {  
+         write("default session start");
+         testStepPass("default session start");
+       }
+      else //negative response
+       {
+        write(" default session start");
+        testStepFail("default session start");
+       }    
+    }
+ 
+   msgengReq.byte(0)=0x032;
+   msgengReq.byte(1)=0x002;
+   msgengReq.byte(2)=0x012; //expected result
+   msgengReq.byte(3)=0x003; //param1
+   msgengReq.byte(4)=0x020; //param2
+   msgengReq.byte(5)=0x012; 
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+   output(msgengReq);
+
+   //-----------------------
+   //--- EXPECTED RESULT ---
+   //-----------------------
+   
+   if( 1 != TestWaitForMessage(80, 10000) )
+	{
+	   TestStepFail("Diagnosis Response timed out");
+	}
+   else
+    {
+    byte0R = msgengRes.BYTE(0);
+    byte2R = msgengRes.BYTE(2);
+    
+    write("-----------------------------------------------TEST CASE 4 STEP 1-------------------------------------------------------------------");
+    write("MESSAGE REQUEST FROM TEST id %x byte0 %X  byte1 %X ",msgengReq.ID,msgengReq.byte(0),msgengReq.byte(1));
+    write("MESSAGE RESPONSE FROM TEST id %x  byte2 %x  byte3 %x  byte4 %x  byte5 %x ",msgengRes.ID,msgengRes.byte(2),msgengRes.byte(3),msgengRes.byte(4),msgengRes.byte(5));
+    write("-----------------------------------------------------------------------------------------------------------------------");
+    
+    // check response content
+  
+   if(byte0R == 0x072) //pos resp
+   { 
+   write("write service not allowed in default session ");
+   testStepFail("write services not allowed in default session ");
+   }
+   else //neg resp
+   {
+   write("write service in  default session should not be allowed");
+   testStepPass("write service in default session should not be allowed");
+   }
+   }
+  //start programming session
+  //send change session message request
+   
+   msgengReq.byte(0)=0x012;
+   msgengReq.byte(1)=0x001;
+   msgengReq.byte(2)=0x002; // programming session =2
+   msgengReq.byte(3)=0x000;
+   msgengReq.byte(4)=0x000;
+   msgengReq.byte(5)=0x000; 
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+   output(msgengReq);
+  
+  write("change session req  sent!!!!!!!!!!");
+   if( 1 != TestWaitForMessage(80, 10000) )
+	{
+	   TestStepFail("Diagnosis Response timed out");
+	}
+   else
+    {
+      if(msgengRes.byte(0)== 0x052) //positive response
+       {  
+         write("programming session start");
+         testStepPass("programming session start");
+       }
+      else //negative response
+       {
+        write(" programming session start");
+        testStepFail(" programming session start");
+       }    
+    }
+
+  
+
+   msgengReq.byte(0)=0x032;
+   msgengReq.byte(1)=0x002;
+   msgengReq.byte(2)=0x012; // checkup date in format dd mm yyyy -dd
+   msgengReq.byte(3)=0x003; //mm
+   msgengReq.byte(4)=0x020; //yy
+   msgengReq.byte(5)=0x012; //yy
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+
+   output(msgengReq);
+
+   
+   //-----------------------
+   //--- EXPECTED RESULT ---
+   //-----------------------
+    
+   //start - default session
+	if( 1 != TestWaitForMessage(80, 15000) )
+	{
+	   TestStepFail("Diagnosis Response timed out");
+	}
+   else
+    {
+
+    byte0R = msgengRes.BYTE(0);
+    byte2R = msgengRes.BYTE(2);
+    byte23 = msgengRes.dword(2);
+
+    write("-----------------------------------------------TEST CASE 4 STEP 3-------------------------------------------------------------------");
+    write("MESSAGE REQUEST FROM TEST id %x byte0 %X  byte1 %X ",msgengReq.ID,msgengReq.byte(0),msgengReq.byte(1));
+    write("MESSAGE RESPONSE FROM TEST id %x  byte2 %x  byte3 %x  byte4 %x  byte5 %x ",msgengRes.ID,msgengRes.byte(2),msgengRes.byte(3),msgengRes.byte(4),msgengRes.byte(5));
+    write("-----------------------------------------------------------------------------------------------------------------------");
+
+     if(byte0R == 0x072) //pos resp
+    {  
+       
+       if((msgengRes.byte(2)==0x012) &&(msgengRes.byte(3)==0x003) && (msgengRes.byte(4)==0x020) &&(msgengRes.byte(5)==0x012))
+        { write("write last service checkup in programming session");
+          testStepPass("write last service checkup succeded programming session");
+        }
+        
+       else
+       { testStepFail("write last service checkup failed programming session- date not correct");}
+     }    
+     else //neg resp
+     { 
+       write("routine ctrl in programming session");
+       testStepFail("routine ctrl in programming session");
+     }//else
+    }
+
+
+  //----------------------
+  //--- POSTCONDITION ----
+  //----------------------
+
+  ///////////////////////////////////////////////////////////////////////////////
+  //------------------------------ TEST CASE END --------------------------------
+  ///////////////////////////////////////////////////////////////////////////////
+
+
+
+
+}
+/*@@end*/
+

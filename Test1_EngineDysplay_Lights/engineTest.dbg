@@ -1,0 +1,15 @@
+[Head]
+Version=0xC091
+DebugVersion=0x4
+
+[Databases]
+DatabasePath0=Databases\flf&crd_test1_db.dbc
+DatabaseName0=flfcrd_test1_db
+DatabaseDefaultChipMask0=1
+
+[Function0]
+NodeName=engineTest
+FunctionName=$globals
+Address=0
+Size=0
+

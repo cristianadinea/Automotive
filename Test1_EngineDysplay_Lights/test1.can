@@ -1,0 +1,144 @@
+/*@@var:*/
+variables
+{
+
+dword gCycCheckId;
+
+dword glbHandle = 0; //file handle
+long resWait;
+
+byte byte0RQ;
+byte byte1RQ;
+byte byte0R;
+byte byte1R;
+byte byte2R;
+byte byte0;
+
+MESSAGE TEST_MSG_ENGINE_REQ msgengReq;
+MESSAGE TEST_MSG_ENGINE_RES msgengRes;
+
+
+}
+/*@@end*/
+
+/*@@mainTest:MainTest():*/
+void MainTest()
+{
+  
+  //preconditions
+  //  TestWaitForMessage(0x050,10000); //wait for response
+  // if(resWait)
+  // { write(" msgReq byte0 %X      msgRes byte0 %X", msgengReq.byte(0) ,msgengRes.byte(0));}
+  // else
+  //   { write("message not arrived"); }
+  // TestWaitForTimeout(15000);
+
+   write("*****************************");
+   write(" Engine Validation Test");
+   write("*****************************");
+   write(" ");
+
+
+  TestGroupBegin("Message Read", "Check the engine ID and RPM");
+    
+    TestCase1();
+    
+  TestGroupEnd(); 
+}
+/*@@end*/
+
+/*@@testcase:TestCase1():*/
+testcase TestCase1()
+{
+ byte byte0RQ;
+ byte byte1RQ;
+ byte byte0R;
+ byte byte1R;
+ byte byte2R;
+ byte byte0;
+ dword byte23;
+
+ TestCaseTitle("ID_1","1.1 - Read Engine Serial Number -");
+ TestCaseDescription("Read is available in any session ");
+  
+ ///////////////////////////////////////////////////////////////////////////////
+ //------------------------------ TEST STEPS -----------------------------------
+ ///////////////////////////////////////////////////////////////////////////////
+
+
+ //TestStep("step 01"," Negative response not alloowed ");
+    
+ //----------------------
+ //---- PRECONDITION ---- 
+ //----------------------
+    
+
+ //----------------------
+ //----- TEST STEP ------
+ //----------------------
+ 
+   msgengReq.byte(0)=0x022;
+   msgengReq.byte(1)=0x001;
+   msgengReq.byte(2)=0x000;
+   msgengReq.byte(3)=0x000;
+   msgengReq.byte(4)=0x000;
+   msgengReq.byte(5)=0x000; 
+   msgengReq.byte(6)=0x000;
+   msgengReq.byte(7)=0x000;
+   msgengReq.can=1;
+   output(msgengReq);
+
+   //TestWaitForMessage(80, 15000);
+   //-----------------------
+   //--- EXPECTED RESULT ---
+   //-----------------------
+    
+	if( 1 != TestWaitForMessage(80, 10000) )
+	{
+
+	   TestStepFail("Diagnosis Response timed out");
+	}
+
+    else
+    {
+     byte0R = msgengRes.BYTE(0);
+     byte1R = msgengRes.BYTE(1);
+     write("-----------------------------------------------TEST  CASE 1-------------------------------------------------------------------");
+     write("MESSAGE REQUEST FROM TEST id %x byte0 %X  byte1 %X ",msgengReq.ID,msgengReq.byte(0),msgengReq.byte(1));
+     write("MESSAGE RESPONSE FROM TEST id %x byte0 %x  byte1 %x ",msgengRes.ID,msgengRes.byte(0),byte1R);
+     write("-----------------------------------------------------------------------------------------------------------------------");
+
+    // check response content
+    if(byte0R == 0x062) //pos resp
+    { 
+      write("read serial no in default session");
+      testStepPass("read serial no in default session") ;
+    }
+    else
+    { 
+      write("read serial no in default session");
+      testStepFail("read serial no in default session");
+    }
+
+}
+
+    //----------------------
+	//--- POSTCONDITION ----
+    //----------------------
+
+
+///////////////////////////////////////////////////////////////////////////////
+//------------------------------ TEST CASE END --------------------------------
+///////////////////////////////////////////////////////////////////////////////
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::TEST_MSG_ENGINE_RES (0x50):*/
+on message TEST_MSG_ENGINE_RES
+{
+
+msgengRes=this;
+
+}
+/*@@end*/
+

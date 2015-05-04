@@ -1,0 +1,14 @@
+/*@@var:*/
+variables
+{
+
+}
+/*@@end*/
+
+/*@@startStart:Start:*/
+on start
+{
+write("Ecu4 allowed!!!!!!!!!!!!!!!!");
+}
+/*@@end*/
+

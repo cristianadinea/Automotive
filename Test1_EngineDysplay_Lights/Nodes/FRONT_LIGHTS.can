@@ -1,0 +1,866 @@
+/*@@var:*/
+variables
+{
+char text[3]="";
+int var=16;
+int i;
+int cresc=1;// ascending mode
+int incremental=0;//0 rising 1 falling
+int wiperStates=0;//counter to pass through wiper states
+int wiperStatus=0;
+int wiperWater=16;
+
+int hazardLightsStatus = 0;
+int leftIndicatorStatus=0;
+int rightIndicatorStatus=0;
+
+
+int PRESSEDB =0;
+int PRESSEDA =0; //0  accelerator not pressed 1 accelerator  pressed
+int accPedalProg;
+int x;
+int tempRPM;
+int wheel_dist =1.0;
+int coefAcc =727.27;
+int coefBrake = 757.57;
+int sessionNo=1;//default session by default
+int thisAcc;
+const int hazardLightFrequency = 500;
+
+
+float actSpeed;
+float actRPM;
+float carTireCirc;
+float thisSimulationDistance; //total distance in this simulation
+float spdMet;
+float rpmCurrent;
+float spdTemp;
+
+message MSG_LIGHTS msgLight;
+message MSG_WIPER msgWiper;
+message MSG_ACCPEDALS msgAccPed;
+message MSG_BRAKEPEDALS msgBrkPed;
+message MSG_IGNITION msgIg;
+message MSG_ENGINE msgEng;
+message MSG_GEAR msgGe;
+message MSG_WINDOWS msgWi;
+message TEST_MSG_ENGINE_RES msgR;
+message TEST_MSG_ENGINE_REQ msgRQ;
+
+mstimer timerWiper;
+mstimer timerWiperMic;
+mstimer timerHazardLight;
+mstimer timerLeftIndicator;
+mstimer timerRightIndicator;
+mstimer tBrakeProg;
+mstimer tAccProg;
+
+timer timerLight;
+mstimer timerWater;
+mstimer timerWaterMic;
+timer timerGPS;
+
+
+
+
+}
+/*@@end*/
+
+/*@@envVar:LightsEnv:*/
+on envVar LightsEnv
+{
+ 
+ // $MSG_LIGHTS::SIGNAL_LIGHTS_STATE = @this;
+
+}
+/*@@end*/
+
+/*@@timer:timerLight:*/
+on timer timerLight
+{
+
+cancelTimer(timerLight);
+setTimer(timerLight,100);
+output(msgLight);
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_LIGHTS (0x2):*/
+on message MSG_LIGHTS
+{
+ 
+ write("message ID for message Lights %d" ,this.ID);
+
+}
+/*@@end*/
+
+/*@@envVar:BrakeProgress:*/
+on envVar BrakeProgress
+{
+
+if(@GearEntry==0)
+{
+
+@RPMcurrent= calcEngineSpeed(coefBrake, @this) ; // when acceleration pedal is pressed, brake is zero 0.66 represent the gearspeedNew/gearspeedOld ratio 
+@BrakeActive = @this;
+@SpeedMeter=0;
+
+}
+
+else
+{
+
+if(@BrakeActive<=@BrakeProgress)
+{
+  @RPMcurrent= calcEngineSpeed(coefBrake , @this) ; // when brake pedal is pressed, acceleration is zero - 0.66 represent the gearspeedNew/gearspeedOld ratio
+  @BrakeActive = @this;
+  spdMet = @SpeedMeter;
+  if(spdMet>2)
+   { spdTemp= ((@GearEntry + @BrakeProgress)/2); 
+     @SpeedMeter= spdMet - spdTemp;}
+}
+
+else //going down
+{
+ if(@BrakeActive>@BrakeProgress)
+ {
+  @RPMcurrent= calcEngineSpeed(coefBrake , @this) ; 
+   if (tempRPM<0 || tempRPM>7000)
+  { write("!!!!!!Brake change caused RPM outside  range value!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); }
+    spdMet =@SpeedMeter;
+   if(spdMet<220)
+  { 
+   spdTemp=((@GearEntry + @BrakeActive)/2 );
+   write("speed meter greater than 1");
+   @SpeedMeter =spdMet+ spdTemp;
+   @BrakeActive = @this;
+   } 
+  }
+ }
+}
+
+$MSG_BRAKEPEDALS::SIGNAL_BRAKEPEDAL_STATUS = @this; 
+$MSG_ENGINE::SIGNAL_ENGINE_RPM = @RPMcurrent;
+}
+/*@@end*/
+
+/*@@envVar:HazardLights:*/
+on envVar HazardLights
+{
+  if (@this)
+  {
+    hazardLightsStatus = 1;
+    //@LightsEnv = 7;
+    setTimer(timerHazardLight, hazardLightFrequency);
+  }
+  else
+  {
+    cancelTimer(timerHazardLight);
+    hazardLightsStatus = 0;
+    $MSG_LIGHTS::SIGNAL_HAZARD_STATE = hazardLightsStatus;
+    $MSG_LIGHTS::SIGNAL_LEFTINDICATOR_STATE = hazardLightsStatus;
+    $MSG_LIGHTS::SIGNAL_RIGHTINDICATOR_STATE = hazardLightsStatus;
+    }
+}
+/*@@end*/
+
+/*@@timer:timerHazardLight:*/
+on timer timerHazardLight
+{
+  //@LightsEnv = 7;
+  //setTimer(this,5);
+   hazardLightsStatus = (hazardLightsStatus == 1 ? 0 : 1);
+   $MSG_LIGHTS::SIGNAL_HAZARD_STATE = hazardLightsStatus;
+   $MSG_LIGHTS::SIGNAL_LEFTINDICATOR_STATE = 0;
+   $MSG_LIGHTS::SIGNAL_RIGHTINDICATOR_STATE =0;
+   setTimer(this, hazardLightFrequency);
+
+}
+/*@@end*/
+
+/*@@envVar:WiperEnv:*/
+on envVar WiperEnv
+{
+
+if(@this>=1)//button to wipe the window is pressed
+{  
+  wiperStatus=@this;
+  setTimer(timerWiper,1);
+}
+
+else
+{ 
+  wiperStates=0;
+  cancelTimer(timerWiper);
+  cancelTimer(timerWiperMic);
+  $MSG_WIPER::SIGNAL_WIPER_POSITION=0;
+}
+
+$MSG_WIPER::SIGNAL_WIPER_STATUS = wiperStatus;
+
+}
+/*@@end*/
+
+/*@@timer:timerWiper:*/
+on timer timerWiper
+{
+
+//wiperWater=16;
+//incremental =0;
+wiperStatus =@WiperEnv;
+
+if(wiperStatus==1) // speed 1
+  { 
+    setTimer(timerWiperMic,32/var *100); 
+    setTimer(timerWiper,48*100);
+  }
+
+else
+  { 
+    if(wiperStatus==2) // speed 2
+     { 
+      setTimer(timerWiperMic,16/var*100);
+      setTimer(timerWiper,32*100);
+     } 
+  }
+
+}
+/*@@end*/
+
+/*@@timer:timerWiperMic:*/
+on timer timerWiperMic
+{
+
+//cancelTimer(this);
+//@WiperWindow=wiperStates;
+//wiperStates++;
+//if(wiperStates<0 )
+// { cancelTimer(this);
+//   cancelTimer(timerWiper);
+// }
+
+if(@CurrentWiperState==15)
+  { incremental=1; }
+if(@CurrentWiperState ==0)
+  { incremental=0;}
+
+if(incremental==0)//rising
+ { 
+  //if(@SwitchWiperWater)// with water
+  // {   wiperWater=wiperStates+16;
+  //     $MSG_WIPER::SIGNAL_WIPER_POSITION = wiperWater;
+  // wiperWater++;
+  // }
+  // else
+  $MSG_WIPER::SIGNAL_WIPER_POSITION = wiperStates;
+  wiperStates++;
+  @CurrentWiperState= wiperStates;
+  output(msgWiper);
+  //wiperStates++;
+  if(@WiperEnv==1) 
+     { setTimer(this,48/var*100);}
+   else
+     { 
+     if(@WiperEnv==0)
+      {cancelTimer(this);}
+     if(@WiperEnv==2)
+      {setTimer(this,16/var*100);}
+     }
+   }
+
+else //falling
+  { 
+    
+    //wiperBackStates--;
+   // if(@WiperSel ==3)
+   //  {wiperWater=wiperStates+16;
+   //   $MSG_WIPER::SIGNAL_WIPER_POSITION = wiperWater;
+   //   wiperWater--;
+   //  }
+   // else{
+    $MSG_WIPER::SIGNAL_WIPER_POSITION = wiperStates;
+    wiperStates--;
+    @CurrentWiperState= wiperStates;
+    //}
+     output(msgWiper);
+    //@WiperWindow=wiperStates;
+    if(@WiperEnv==1)
+     { setTimer(this,48/var*100);}
+   else
+     { 
+      if(@WiperEnv==0)
+       {cancelTimer(this);}
+      if(@WiperEnv==2)
+       {setTimer(this,16/var*100);}
+   }
+ }
+}
+  
+/*@@end*/
+
+/*@@envVar:LeftIndicatorButton:*/
+on envVar LeftIndicatorButton
+{
+if(@this) //left indicator pressed 
+ { 
+   // cancelTimer(timerLeftIndicator);
+  //  cancelTimer(timerRightIndicator); 
+    leftIndicatorStatus=1;
+    setTimer(timerLeftIndicator,hazardLightFrequency);
+  }
+  else
+  {
+    leftIndicatorStatus=0;
+    cancelTimer(timerLeftIndicator);
+    $MSG_LIGHTS::SIGNAL_LEFTINDICATOR_STATE = leftIndicatorStatus;
+    $MSG_LIGHTS::SIGNAL_HAZARD_STATE = leftIndicatorStatus;
+    $MSG_LIGHTS::SIGNAL_RIGHTINDICATOR_STATE = leftIndicatorStatus;
+    }
+ }
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_WIPER (0x4):*/
+on message MSG_WIPER
+{
+
+write("~~~~~~~~~~~~~~~~send mesage %d~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", msgWiper.ID);
+
+}
+/*@@end*/
+
+/*@@timer:tBrakeProg:*/
+on timer tBrakeProg
+{
+
+/*
+if(PRESSEDB==1) // brake  pedal is pressed
+{
+  if(@BrakeProgress<100)
+  {    
+   @BrakeProgress = @BrakeProgress +1;
+   spdMet  = @SpeedMeter;
+   if(spdMet>0)
+    { @SpeedMeter= spdMet - 1; }
+      }
+  }
+
+if(PRESSEDB==0)
+  {
+      if(@BrakeProgress>0)
+       {
+        @BrakeProgress = @BrakeProgress -1;
+        spdMet= @SpeedMeter;
+        if(spdMet<220)
+        {  @SpeedMeter= spdMet + 1;}
+       }
+       
+ }
+  
+ $MSG_BRAKEPEDALS::SIGNAL_BRAKEPEDAL_POSITION =@BrakeProgress;
+ output(msgBrkPed);
+ setTimer(this ,20);
+  */ 
+}
+/*@@end*/
+
+/*@@timer:tAccProg:*/
+on timer tAccProg
+{
+/*spdMet= 0.0;
+if(PRESSEDA==1) //accelerator pedal is pressed
+ {
+    if(@AcceleratorProgress<100)
+      {
+       @AcceleratorProgress = @AcceleratorProgress + 1;
+       spdMet = @SpeedMeter;
+       if(spdMet<220)
+          { @SpeedMeter= spdMet + 1;}
+      }
+  }
+
+if(PRESSEDA==0)
+   {
+      if(@AcceleratorProgress>0)
+       {
+        @AcceleratorProgress = @AcceleratorProgress - 1;
+        spdMet = @SpeedMeter;
+        if(spdMet>0)
+          { @SpeedMeter= spdMet -1;}
+       }
+       
+   }
+  
+ $MSG_ACCPEDALS::SIGNAL_ACCPEDAL_POSITION =@AcceleratorProgress;
+ output(msgAccPed);
+ setTimer(this ,20);
+ */  
+}
+/*@@end*/
+
+/*@@envVar:AcceleratorProgress:*/
+on envVar AcceleratorProgress
+{
+//compute momentary engine rpm
+
+
+if(@GearEntry == 0) 
+{
+@RPMcurrent= calcEngineSpeed(coefAcc, @this) ; // when acceleration pedal is pressed, brake is zero 0.66 represent the gearspeedNew/gearspeedOld ratio 
+@AcceleratorActive = @this;
+@SpeedMeter=0;
+}
+
+
+else
+{
+if(@this)
+ { @GpsStart=0;}
+
+if(@AcceleratorActive<@AcceleratorProgress) //going up ; = reached the upper/lower limit
+{
+  @RPMcurrent= calcEngineSpeed(coefAcc, @this) ; // when acceleration pedal is pressed, brake is zero 0.66 represent the gearspeedNew/gearspeedOld ratio 
+  @AcceleratorActive = @this;
+  spdMet = @SpeedMeter ;
+  if(spdMet<220)
+    { spdTemp= ((@GearEntry + @AcceleratorProgress)/2);
+     
+     write("going up at leve %d increase %f ", @AcceleratorProgress,spdTemp);
+     @SpeedMeter= spdMet +  spdTemp;}
+   else
+    { @SpeedMeter =220;}
+}
+
+else 
+{
+
+if(@AcceleratorActive>@AcceleratorProgress) //going down
+{
+  @RPMcurrent= calcEngineSpeed(coefAcc, @this) ;
+ 
+  spdMet =@SpeedMeter ;
+  
+  if(spdMet>1)
+  { 
+
+  spdTemp=((@GearEntry + @AcceleratorActive)/2 );
+   
+  write("going down at leve %d decrease %f ", @AcceleratorProgress,spdTemp);
+  @SpeedMeter = spdMet - spdTemp;
+  @AcceleratorActive = @this;}
+   } //if 
+  else
+  { @SpeedMeter =8.22;}
+
+} //else
+}  //else
+
+$MSG_ACCPEDALS::SIGNAL_ACCPEDAL_STATUS = @this; 
+$MSG_ENGINE::SIGNAL_ENGINE_RPM = @RPMcurrent;
+
+}
+/*@@end*/
+
+/*@@startStart:Start:*/
+on start
+{
+@WholeMap=1;
+
+@PointOnMap=0;
+
+setTimer(tAccProg,20);
+setTimer(tBrakeProg,20);
+//setTimer(timerLight,10);
+carTireCirc= ((@TyreWidth * @TyreHeight/100 *2) +@WheelSize*10)* 3.14;
+@TyreDiameter = carTireCirc;
+
+@GpsStart=1;
+
+@AcceleratorActive=0;
+@AcceleratorProgress=0;
+@BrakeActive=0;
+@BrakeProgress=0;
+@WheelControl=0;
+
+}
+/*@@end*/
+
+/*@@caplFunc:calcEngineSpeed(int,int):*///function
+float calcEngineSpeed (int coef, int level)
+{
+
+return (@RPMinit + coef* level * 0.66);
+
+}
+/*@@end*/
+
+/*@@envVar:RightIndicatorButton:*/
+on envVar RightIndicatorButton
+{
+ if(@this) // right  indicator pressed 
+  { 
+    //cancelTimer(timerRightIndicator);
+    cancelTimer(timerLeftIndicator);
+    rightIndicatorStatus=1;
+    setTimer(timerRightIndicator,hazardLightFrequency);}
+  
+  else
+  { 
+    cancelTimer(timerRightIndicator);
+    rightIndicatorStatus=0;
+    $MSG_LIGHTS::SIGNAL_RIGHTINDICATOR_STATE = rightIndicatorStatus;
+    $MSG_LIGHTS::SIGNAL_LEFTINDICATOR_STATE = rightIndicatorStatus;
+    $MSG_LIGHTS::SIGNAL_HAZARD_STATE = rightIndicatorStatus;
+   }
+   }
+/*@@end*/
+
+/*@@timer:timerLeftIndicator:*/
+on timer timerLeftIndicator
+{
+   leftIndicatorStatus = (leftIndicatorStatus == 1 ? 0 : 1);
+   $MSG_LIGHTS::SIGNAL_LEFTINDICATOR_STATE = leftIndicatorStatus;
+   $MSG_LIGHTS::SIGNAL_HAZARD_STATE = 0;
+   $MSG_LIGHTS::SIGNAL_RIGHTINDICATOR_STATE = 0;
+   //output(msgLight);
+   
+   setTimer(this, hazardLightFrequency);
+   }
+/*@@end*/
+
+/*@@timer:timerRightIndicator:*/
+on timer timerRightIndicator
+{
+   rightIndicatorStatus = (rightIndicatorStatus == 1 ? 0 : 1);
+   $MSG_LIGHTS::SIGNAL_RIGHTINDICATOR_STATE = rightIndicatorStatus;
+   $MSG_LIGHTS::SIGNAL_LEFTINDICATOR_STATE = 0;
+   $MSG_LIGHTS::SIGNAL_HAZARD_STATE = 0 ;
+  // output(msgLight);
+   setTimer(this, hazardLightFrequency);
+}
+/*@@end*/
+
+/*@@envVar:Ignition:*/
+on envVar Ignition
+{
+
+if(@this )
+  {
+   @LeftIndicatorBack=1;
+   @RightIndicatorFront=5;
+   @LeftIndicatorFront=4;
+   i=18;
+  // setTimer(timerGPS,2);
+   @RPMinit =1200; //initial RPM
+   @RPMcurrent= @RPMinit;
+   $MSG_ENGINE::SIGNAL_ENGINE_RPM = @RPMcurrent;
+   output(msgEng);
+
+   }
+
+$MSG_IGNITION::SIGNAL_IGNITION_STATUS =@this ;
+output(msgIg);
+}
+/*@@end*/
+
+/*@@envVar:GearUp:*/
+on envVar GearUp
+{
+int gear=0;
+
+if(@this) //only one press
+{
+ @GearMode=1;
+ tempRPM= @RPMcurrent;
+ tempRPM -= 800;
+
+ if(tempRPM < 1000)
+   { tempRPM = 1000;}
+
+ @RPMcurrent= tempRPM;
+
+ if(getSignal(SIGNAL_GEAR_SPEED)<6)
+  {
+   gear = $MSG_GEAR::SIGNAL_GEAR_SPEED + 1;
+   $MSG_GEAR::SIGNAL_GEAR_SPEED = gear;
+   @GearEntry = gear;
+  }
+
+ else
+   { 
+     write("gear speed is over 6"); }
+     $MSG_ENGINE::SIGNAL_ENGINE_RPM=@RPMcurrent;
+   }
+ }
+/*@@end*/
+
+/*@@envVar:GearDown:*/
+on envVar GearDown
+{
+int gearD=0;
+
+if(@this) //only one press
+{
+@GearMode=-1;
+tempRPM= @RPMcurrent;
+tempRPM += 800;
+if(tempRPM>6500)
+ { @RPMcurrent= tempRPM; }
+
+if(getSignal(SIGNAL_GEAR_SPEED)>0)
+{ 
+  gearD = $MSG_GEAR::SIGNAL_GEAR_SPEED - 1;
+  $MSG_GEAR::SIGNAL_GEAR_SPEED = gearD;
+  @GearEntry = gearD;
+}
+
+else
+{
+write("gear speed is less than 0");
+
+} 
+ 
+$MSG_ENGINE::SIGNAL_ENGINE_RPM = @RPMcurrent; 
+} 
+}
+/*@@end*/
+
+/*@@envVar:LeftWindDown:*/
+on envVar LeftWindDown
+{
+
+int oldWind=0;
+
+if(@this) //one press
+{
+oldWind= $MSG_WINDOWS:: SIGNAL_LEFTWIND_STATUS ;
+if(oldWind <12)
+  {  oldWind +=  1;
+     $MSG_WINDOWS::SIGNAL_LEFTWIND_STATUS= oldWind ;
+     @LeftWindow = oldWind ; 
+     @FrontWindDown= oldWind;
+  }
+else
+ { } //less than zero, cant go lower
+ 
+}
+
+
+
+}
+/*@@end*/
+
+/*@@envVar:LeftWindUp:*/
+on envVar LeftWindUp
+{
+int oldWind=0;
+
+if(@this) //one press
+{
+oldWind= $MSG_WINDOWS:: SIGNAL_LEFTWIND_STATUS ;
+if(oldWind >0)
+  {  
+      oldWind = oldWind-1;
+     $MSG_WINDOWS::SIGNAL_LEFTWIND_STATUS= oldWind ; 
+     @LeftWindow =oldWind;
+     @FrontWindDown=oldWind;
+     
+   }
+else
+ { } //greater than 13, cant go upper 
+} 
+
+}
+/*@@end*/
+
+/*@@envVar:RadioButton:*/
+on envVar RadioButton
+{
+if(@Ignition)
+{
+if(@this) // radio button pressed 
+ {  char text[12]= " RADIO ON";
+    putValue(RadioText,text);
+ }
+else
+ { char text[1]="";
+   putValue(RadioText,text);
+   @RadioButton3=0;
+   @RadioButton2=0;
+   @RadioButton1=0;
+ }
+
+ @Media1 =0;
+ @Media2=0;
+ @Media3 =0;
+ $MSG_RADIO::SIGNAL_RADIO_STATUS = @this;}
+}
+/*@@end*/
+
+/*@@envVar:RadioButton1:*/
+on envVar RadioButton1
+{
+
+if(@Ignition)
+{
+ if(@this)
+ { char radioT[25] ="   F M   101.3   ";
+   @Media1= 1;
+   @Media2= 0;
+   @RadioButton2=0;
+   @Media3= 0;
+   @RadioButton3=0;
+   putValue(RadioText,radioT); }
+else
+ { @Media1=0; }
+
+}
+}
+/*@@end*/
+
+/*@@envVar:RadioButton2:*/
+on envVar RadioButton2
+{
+if(@Ignition)
+{
+ if(@this)
+  { char radioT[25] ="   F M  99.8     "; 
+    @Media2 = 1;
+    @Media1=0;
+    @RadioButton1=0;
+    @Media3 =0;
+    @RadioButton3=0;
+     putValue(RadioText,radioT);}
+else
+ {  @Media2=0; }
+}
+}
+/*@@end*/
+
+/*@@envVar:RadioButton3:*/
+on envVar RadioButton3
+{
+if(@Ignition)
+{
+if(@this)
+ { char radioT[25] ="   F M  87.7    "; 
+   @Media3 = 1;
+   @Media2=0;
+   @RadioButton2=0;
+   @Media1 =0;
+   @RadioButton1=0;
+   putValue(RadioText,radioT);}
+else
+ {  @Media3 = 0;}
+}
+
+}
+/*@@end*/
+
+/*@@envVar:WheelSlider:*/
+on envVar WheelSlider
+{
+
+@TotalDist= @WheelSlider * wheel_dist;
+
+
+}
+/*@@end*/
+
+/*@@envVar:ShowCarCirc:*/
+on envVar ShowCarCirc
+{
+
+
+putValue(WarnTire,text);
+
+}
+/*@@end*/
+
+/*@@envVar:SwitchWiperWater:*/
+on envVar SwitchWiperWater
+{
+
+if(@this) // button to choose wipers and water  
+ { 
+   wiperWater=@this;
+   setTimer(timerWater,1);
+ }
+
+else
+ { 
+   cancelTimer(timerWater);
+   cancelTimer(timerWaterMic);
+   $MSG_WIPER::SIGNAL_WIPER_POSITION=0;
+ }
+
+$MSG_WIPER::SIGNAL_WIPER_STATUS = wiperStatus;
+
+}
+/*@@end*/
+
+/*@@timer:timerWater:*/
+on timer timerWater
+{
+
+wiperStates=0;
+
+wiperWater=16;// on WIPERWATER image this is where the rendered water appears
+
+wiperStatus = @SwitchWiperWater;
+if(wiperStatus)  //wiper Water is pressed
+ { 
+    setTimer(timerWaterMic,32/var*100); 
+    setTimer(timerWater,48*100);
+ }
+
+}
+/*@@end*/
+
+/*@@timer:timerWaterMic:*/
+on timer timerWaterMic
+{
+
+//cancelTimer(this);
+if(@SwitchWiperWater)
+  { 
+//   wiperWater=wiperStates+16;
+   $MSG_WIPER::SIGNAL_WIPER_POSITION = wiperWater;
+   wiperWater++;
+   output(msgWiper);
+   //wiperStates++;
+
+   if(@SwitchWiperWater==1) 
+    { setTimer(this,48/var*100);}
+   else
+    { 
+     if(@SwitchWiperWater==0)
+      {cancelTimer(this);}
+    }
+}
+}
+/*@@end*/
+
+/*@@timer:timerGPS:*/
+on timer timerGPS
+{
+
+if(i>0)
+ i--;
+else
+ { i=18;}  
+
+@PointOnMap=i;
+setTimer(this,2);
+
+}
+/*@@end*/
+
+/*@@envVar:GpsStart:*/
+on envVar GpsStart
+{
+if(@this==0)
+{ settimer(timerGPS,2);}
+}
+/*@@end*/
+

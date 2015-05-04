@@ -1,0 +1,594 @@
+/*@@var:*/
+variables
+{
+
+File file;
+dword glbHandle = 0; //file handle
+dword fileHandle2=0;
+int x;
+int engPetrolL =55;
+int rpmvalue=0;
+int gEngTemp =0;
+int gEmpty = 0;
+int gPetrolTimeFaktor = 15;
+int sessionNo = 1; //=1 default session      =2 programming  session
+int ecuIdentifNumber[4]= {1,1,2,2};//,2,3,4,5,1,1,1,1};
+int engineRPM_MAX =7000; //maximum engine speed
+const int cPetrolFaktor     = 8 ;
+const int cEngPetrolTime    = 5;
+
+float tempEng = 50  ; //  start value for engine temperature
+float oldRPM;
+float gEngPetrolLevel= 55; // start with a full tank
+float sig1, sig2;
+
+
+timer   timerEngine;
+mstimer timerEngPetrol;
+mstimer timerEngTemp;
+mstimer timerWarn;
+
+message MSG_ENGINE msgEngine;
+message TEST_MSG_ENGINE_RES msgR;
+MESSAGE TEST_MSG_ENGINE_REQ msgRQ;
+
+message TEST_MSG_ENGINE_RES_MAN msgRM;
+MESSAGE TEST_MSG_ENGINE_REQ_MAN msgRQM;
+
+
+}
+/*@@end*/
+
+/*@@busOff:BusOff:*/
+on busOff
+{
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_ENGINE (0x0):*/
+on message MSG_ENGINE
+{
+
+@RPMValue = $MSG_ENGINE::SIGNAL_ENGINE_RPM;
+
+}
+/*@@end*/
+
+/*@@errorFrameErrorFrame:ErrorFrame:*/
+on errorFrame
+{
+}
+/*@@end*/
+
+/*@@startStart:Start:*/
+on start
+{
+
+cancelTimer(timerWarn);
+cancelTimer(timerEngTemp);
+
+@RPMValue = rpmvalue;
+@RPMmax= engineRPM_MAX;
+
+}
+/*@@end*/
+
+/*@@timer:timerEngine:*/
+on timer timerEngine
+{
+cancelTimer(timerEngine);
+setTimer(timerEngine,100);
+write("%d message id : ", msgEngine.ID);
+//output(msgEngine);
+//output(msgPed);
+}
+/*@@end*/
+
+/*@@timer:timerEngPetrol:*/
+on timer timerEngPetrol
+{
+  /*if(@Ignition)
+  {
+  cancelTimer(timerEngPetrol);
+
+  if(gEngPetrolLevel < 55)  
+  {
+    gEngPetrolLevel ++;
+    $MSG_ENGINE::SIGNAL_PETROL_LEVEL = gEngPetrolLevel;
+  }
+  
+  else if(gEngPetrolLevel == 55)  
+  {   
+    gEmpty ++;
+
+    if(gEmpty == gPetrolTimeFaktor)
+      {
+        $MSG_ENGINE::SIGNAL_PETROL_LEVEL = gEngPetrolLevel - (gEmpty / 15);
+        gPetrolTimeFaktor = gPetrolTimeFaktor + 15; 
+      }
+  }
+
+  if(gEmpty == 840) 
+  {
+    //stop();
+  }
+  setTimer(this,cEngPetrolTime + (gEngPetrolLevel * cPetrolFaktor) );
+}*/
+
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::MSG_IGNITION (0x11):*/
+on message MSG_IGNITION
+{
+
+$MSG_ENGINE::SIGNAL_ENGINE_STATUS = $MSG_IGNITION::SIGNAL_IGNITION_STATUS;
+$MSG_ENGINE::SIGNAL_ENGINE_TEMP = tempEng;// start temperature
+$MSG_ENGINE::SIGNAL_PETROL_LEVEL=engPetrolL;// start with a full tank
+
+}
+/*@@end*/
+
+/*@@timer:timerEngTemp:*/
+on timer timerEngTemp
+{
+if(@EnvFuelLight ==1)
+   { @EnvFuelLight=0;}
+ else
+   { @EnvFuelLight=1;}
+setTimer(this,10);
+
+}
+/*@@end*/
+
+/*@@timer:timerWarn:*/
+on timer timerWarn
+{
+ if(@EnvWarLight ==1)
+   { @EnvWarLight=0;}
+ else
+   { @EnvWarLight=1;}
+setTimer(this,10);
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::TEST_MSG_ENGINE_REQ (0x9):*/
+on message TEST_MSG_ENGINE_REQ
+{ 
+
+//engine identif no is 1122 hex
+float temp;
+
+byte  byte0;
+byte  byte1;
+byte byte0R;
+byte byte1R;
+
+byte0 = this.byte(0);
+byte1 = this.byte(1);
+
+
+switch(byte0)
+{
+
+case 0x012:{ //change session no
+
+      sessionNo = this.byte(2);
+      msgR.byte(0)= this.byte(0) + 0x040;
+      msgR.byte(1)= this.byte(1); 
+      msgR.byte(2)= this.byte(2);
+      msgR.byte(3)= 0x000;
+      msgR.byte(4)= 0x000;
+      msgR.byte(5)= 0x000;
+      msgR.byte(6)= 0x000;
+      msgR.byte(7)= 0x000;
+      } break;
+
+case 0x022:{ 
+
+       msgR.byte(0) = this.byte(0)+0x040; //negative response not allow, always resp positive
+       switch(byte1)
+        {
+         case  0x001: //read ecu serial number
+            {
+             msgR.byte(1)= this.byte(1);
+             msgR.byte(2)= 0x011;
+             msgR.byte(3)= 0x022;
+             msgR.byte(4)= 0x000;
+             msgR.byte(5)= 0x000;
+             msgR.byte(6)= 0x000;
+             msgR.byte(7)= 0x000;
+             msgR.can=1;
+            }
+        case 0x002: //read actual RPM
+        {
+             msgR.byte(1)= this.byte(1);
+             msgR.word(2)= getSignal(MSG_ENGINE::SIGNAL_ENGINE_RPM);
+             msgR.byte(4)=0x000;
+             msgR.byte(5)=0x000;
+             msgR.byte(6)=0x000;
+             msgR.byte(7)=0x000;
+             msgR.can=1;
+         }
+      }//switch
+      }//case
+       break;
+case 0x032:
+{
+       
+      if(sessionNo==2) //programming session
+      {
+      
+       switch(byte1)
+        {
+         case  0x001: //write ecu serial number
+            {
+             
+             msgR.byte(0)=this.byte(0)+0x040; 
+             msgR.byte(1)= this.byte(1);
+             msgR.byte(2)= this.byte(2);
+             msgR.byte(3)= this.byte(3);
+             msgR.byte(4)= 0x000;
+             msgR.byte(5)= 0x000;
+             msgR.byte(6)= 0x000;
+             msgR.byte(7)= 0x000;
+             msgR.can=1;
+             break;
+            } 
+        
+        case 0x002: //write last service checkup
+            {
+             msgR.byte(0)=this.byte(0)+0x040; 
+             msgR.byte(1)= this.byte(1);
+             msgR.byte(2)= this.byte(2);
+             msgR.byte(3)= this.byte(3);
+             msgR.byte(4)= this.byte(4);
+             msgR.byte(5)= this.byte(5);
+             msgR.byte(6)= 0x000;
+             msgR.byte(7)= 0x000;
+             msgR.can=1;
+             break;
+         }
+
+            case 0x003: //write engine serial no
+                {
+            
+                 msgR.byte(0)= 0x7F;
+                 msgR.byte(1)= 0x012;
+                 msgR.byte(2)= 0x000;
+                 msgR.byte(3)= 0x000;
+                 msgR.byte(4)= 0x000;
+                 msgR.byte(5)= 0x000;
+                 msgR.byte(6)= 0x000;
+                 msgR.byte(6)= 0x000;          
+                 break;
+            
+                }
+
+
+
+      }//switch
+      }//if
+     else  //default session, negative response
+      {
+        if(sessionNo==1)
+        {
+         msgR.byte(0)= 0x07f;
+         msgR.byte(1)= 0x011;
+         msgR.byte(2)= 0x000;
+         msgR.byte(3)= 0x022;
+         msgR.byte(4)= 0x000;
+         msgR.byte(5)= 0x000;
+         msgR.byte(6)= 0x000;
+         msgR.byte(7)= 0x000;
+        } //if
+       }//else
+     }//case 
+  break;
+case 0x042:
+{
+ /* if(sessionNo==2) //programming session
+   {
+    switch(byte1)
+    {
+      case  0x001: //check rpm value
+     {
+      temp = calcEngineSpeed(this.byte(3), this.byte(4));
+      if(this.byte(2)==temp ) //expected result
+       {
+         msgR.byte(0)=this.byte(0)+0x040; 
+         msgR.byte(1)= this.byte(1);
+         msgR.byte(2)= this.byte(2);
+         msgR.byte(3)= 0x000;
+         msgR.byte(4)= 0x000;
+         msgR.byte(5)= 0x000;
+         msgR.byte(6)= 0x000;
+         msgR.byte(7)= 0x000;
+         msgR.can=1;
+       }
+      else //not the expected result
+      { 
+       msgR.byte(0)= 0x07f;
+       msgR.byte(1)= 0x013; //incorrect result
+       msgR.byte(2)= 0x000;
+       msgR.byte(3)= 0x022;
+       msgR.byte(4)= 0x000;
+       msgR.byte(5)= 0x000;
+       msgR.byte(6)= 0x000;
+       msgR.byte(7)= 0x000;
+      }
+     } break;
+     }//switch
+      }//if
+    else  //default session, negative response
+    {
+    if(sessionNo==1)
+    {
+     msgR.byte(0)= 0x07f;
+     msgR.byte(1)= 0x011; //incorrect session
+     msgR.byte(2)= 0x000;
+     msgR.byte(3)= 0x022;
+     msgR.byte(4)= 0x000;
+     msgR.byte(5)= 0x000;
+     msgR.byte(6)= 0x000;
+     msgR.byte(7)= 0x000;
+    } //if
+   }//else
+   */
+  }//case 
+  break;
+
+ }//switch
+
+output(msgR);
+
+byte0R=msgR.byte(2);
+byte1R=msgR.byte(3);
+
+write("-----------------------------------------ENGINE-------------------------------------");
+write("MESSAGE REQUEST FROM ENGINE id %x  byte0 %x  byte1 %x",msgRQ.ID,this.byte(0),byte1);
+write("MESSAGE RESPONSE  FROM ENGINE  id %x  byte2 %x  byte3 %x ",msgR.ID,msgR.byte(2),msgR.byte(3));
+write("-------------------------------------------------------------------------------------");
+
+}
+/*@@end*/
+
+/*@@msg:CAN1.flfcrd_test1_db::TEST_MSG_ENGINE_REQ_MAN (0x8):*/
+on message TEST_MSG_ENGINE_REQ_MAN
+{
+
+char warnText[50];
+
+
+char buffer[64];
+char newLine[1];
+word bitInv;
+long ret;
+long glbValue;
+float temp;
+
+byte  byte0;
+byte  byte1;
+
+byte byte0R;
+byte byte1R;
+
+byte0 = this.byte(0);
+byte1 = this.byte(1);
+
+
+
+switch(byte0)
+{
+
+case 0x012:{ 
+            //change session no
+           sessionNo = this.byte(2);
+           msgRM.byte(0)= this.byte(0) + 0x040;
+           msgRM.byte(1)= this.byte(1); 
+           msgRM.byte(2)= this.byte(2);
+           msgRM.byte(3)= 0x000;
+           msgRM.byte(4)= 0x000;
+           msgRM.byte(5)= 0x000;
+           msgRM.byte(6)= 0x000;
+           msgRM.byte(7)= 0x000;
+           break;
+         } 
+
+
+case 0x022:{ 
+      
+      
+      strncpy(warnText,"",48); 
+      putValue(DiagWarnText,warnText);
+
+      msgRM.byte(0) = this.byte(0)+0x040; //negative response not allow, always resp positive
+      switch(byte1)
+     {
+      case  0x001: //read ecu serial number
+     {
+       glbHandle = OpenFileRead ("SerialNoHistory.Txt",0);
+       if ( glbHandle!=0 )
+       {
+       while ( fileGetString(buffer,elcount(buffer),glbHandle)!=0 ) {};
+       glbValue = atol (buffer);
+      
+      // snprintf (glbValue,elcount(buffer),"%x",buffer);
+       
+       write ("Buffer value from read %x.",glbValue);
+       fileClose (glbHandle);
+       msgRM.byte(1)= this.byte(1);
+       msgRM.word(2) = glbValue;
+       msgRM.byte(4)= 0x000;
+       msgRM.byte(5)= 0x000;
+       msgRM.byte(6)= 0x000;
+       msgRM.byte(7)= 0x000;
+       msgRM.can=1;
+       break;
+       }
+      }
+      case 0x002: //read actual RPM
+     { 
+        msgRM.byte(1)= this.byte(1);
+        msgRM.word(2)= getSignal(MSG_ENGINE::SIGNAL_ENGINE_RPM);
+        write("");
+        write("");
+        write(" signal decimal physical  %d  raw %d",msgEngine.SIGNAL_ENGINE_RPM.phys, msgEngine.SIGNAL_ENGINE_RPM);
+        write("");
+        write(" RPM MESSAGE RPM MESSAGE RPM byte2 %x  byte3 %x ",msgRM.byte(2), msgRM.byte(3));
+        write("");
+        write("");
+        msgRM.byte(4)=0x000;
+        msgRM.byte(5)=0x000;
+        msgRM.byte(6)=0x000;
+        msgRM.byte(7)=0x000;
+        msgRM.can=1;
+        break;
+     }
+      case 0x003: //write new processor type
+     {
+            
+      msgR.byte(0)= 0x7F;
+      msgR.byte(1)= 0x012;
+      msgR.byte(2)= 0x000;
+      msgR.byte(3)= 0x000;
+      msgR.byte(4)= 0x000;
+      msgR.byte(5)= 0x000;
+      msgR.byte(6)= 0x000;
+      msgR.byte(6)= 0x000;          
+      break;
+     }
+       default: {  write("default"); }
+    }//switch
+   }//case
+       break;
+
+case 0x032:
+{
+  if(sessionNo==2) //programming session
+      {
+      
+       
+       switch(byte1)
+        {
+         case  0x001: //write ecu serial number
+            {
+             strncpy(warnText," ",1); 
+             putValue(DiagWarnText,warnText);
+            msgRM.byte(0)=this.byte(0)+0x040; 
+            @DiagTestStatusImg3 =2;     
+            glbHandle = OpenFileWrite("SerialNoHistory.txt",2); //open file for write access
+            if ( glbHandle!=0 )
+            {
+             write("");
+             write("the new serial numberrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr");
+             bitInv=this.byte(2) * 0x100 + this.byte(3);  
+             snprintf (buffer,elcount(buffer),"%d \n",this.word(2));
+             write("what we have written in buffer %s", buffer);
+             filePutString (buffer, elcount(buffer),glbHandle);
+             fileClose (glbHandle);
+             write("");
+             write("the new serial numberrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr");
+           }
+           else
+           {
+            
+             write("WARNING The file is not opened for write access");}
+             msgRM.byte(1)= this.byte(1);
+             
+             msgRM.word(2)=  this.word(2);
+             msgRM.byte(4)= 0x000;
+             msgRM.byte(5)= 0x000;
+             msgRM.byte(6)= 0x000;
+             msgRM.byte(7)= 0x000;
+             msgRM.can=1;
+             break;
+           }
+            
+        case 0x002://write last service checkup
+        {   
+            strncpy(warnText," ",1); 
+            putValue(DiagWarnText,warnText);
+            msgRM.byte(0)=this.byte(0)+0x040; 
+            @DiagTestStatusImg4 =2;
+            fileHandle2 = OpenFileWrite ("ServiceCkeckup.txt",2); //open file for write access
+             if ( fileHandle2!=0 )
+            {
+            write("----------------------------------------------------------SERVICE CHECKUP----------------------------------------------------------------");
+             bitInv=this.byte(2) * 0x1000000 + this.byte(3) * 0x10000+ this.byte(4) *0x100 +this.byte(5);  
+             snprintf (buffer,elcount(buffer),"%d \n",this.dword(2));
+             write("what we have written in buffer %s", buffer);
+             filePutString (buffer, elcount(buffer),fileHandle2);
+             fileClose (fileHandle2);
+             write("");
+             msgRM.byte(1)= this.byte(1);
+             msgRM.dword(2)= this.dword(2);
+             msgRM.byte(4)=0x000;
+             msgRM.byte(5)=0x000;
+             msgRM.byte(6)=0x000;
+             msgRM.byte(7)=0x000;
+             msgRM.can=1;
+             break;
+            }
+          }
+         case 0x003:
+         {
+          strncpy(warnText,"Subservice not supported  ",48); 
+           putValue(DiagWarnText,warnText);
+           @DiagTestStatusImg5=1;
+          msgRM.byte(0)=0x7F;
+          msgRM.byte(1)=0x012;
+          msgRM.byte(2)=0x000;
+          msgRM.byte(3)=0x000;
+          msgRM.byte(4)=0x000;
+          msgRM.byte(5)=0x000;
+          msgRM.byte(6)=0x000;
+          msgRM.byte(7)=0x000;
+          
+          break;
+         }
+
+       }//switch
+      }//if
+     else  //default session, negative response
+    {
+     if(sessionNo==1)
+     {
+      strncpy(warnText,"Write is only available in programming session ",48); 
+      putValue(DiagWarnText,warnText);
+      if(byte1==0x001)
+       { @DiagTestStatusImg3 =2;}
+      else
+       {
+        if(byte1==0x002)
+          { @DiagTestStatusImg4 =2; }
+        else
+          { @DiagTestStatusImg5= 2;}
+        
+        }
+
+     } //if
+    }//else
+  }//case 
+  
+  break;
+  default: {msgRM.byte(2)=0x88f; msgRM.byte(3)= 0x88f;}
+
+ }//switch
+
+write("");
+write("-----------------------------------------ENGINE-------------------------------------");
+write("MESSAGE REQUEST FROM ENGINE id %x  byte0 %x  byte1 %x",msgRQM.ID,this.byte(0),byte1);
+write("MESSAGE RESPONSE  FROM ENGINE  id %x  byte2 %x  byte3 %x ",msgRM.ID,msgRM.byte(2),msgRM.byte(3));
+write("-------------------------------------------------------------------------------------");
+write("");
+
+output(msgRM);
+
+
+}
+/*@@end*/
+

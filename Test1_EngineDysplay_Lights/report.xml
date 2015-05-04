@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="yes" ?>
+<testmodule starttime="2012-05-28 16:39:47" timestamp="   1.870000">
+  <violation timestamp="   1.870000" type="warning">This is only a DEMO variant of CANoe!</violation>
+  <testgroup>
+    <testcase starttime="2012-05-28 16:39:47" timestamp="   1.870000">
+      <testlogfile file="" />
+      <violation timestamp="   1.870000" type="warning">This is only a DEMO variant of CANoe!</violation>
+      <teststep timestamp="   1.870992" level="1" type="auto" ident="Resume reason" result="na">Resumed on message id=80 (0x50) Elapsed time=0.992ms (max=10000ms)</teststep>
+      <teststep timestamp="   1.870992" type="user" ident="" result="pass">read serial no in default session</teststep>
+      <verdict time="2012-05-28 16:39:47" timestamp="   1.870992" endtime="2012-05-28 16:39:47" endtimestamp="   1.870992" result="pass" />
+      <title>1.1 - Read Engine Serial Number -</title>
+      <ident>ID_1</ident>
+      <description>Read is available in any session </description>
+    </testcase>
+    <title>Message Read</title>
+    <description>Check the engine ID and RPM</description>
+  </testgroup>
+  <verdict time="2012-05-28 16:39:47" timestamp="   1.870992" endtime="2012-05-28 16:39:47" endtimestamp="   1.870992" result="pass" />
+  <title>Test 1</title>
+  <engineer>
+    <xinfo>
+      <name>Windows Login Name</name>
+      <description>crd</description>
+    </xinfo>
+  </engineer>
+  <testsetup>
+    <xinfo>
+      <name>Version</name>
+      <description>CANoe.J1939.LIN.MOST.FlexRay.J1587.IP.Car2x 7.6.68 (SP3)</description>
+    </xinfo>
+    <xinfo>
+      <name>Configuration</name>
+      <description>C:\Users\crd\Desktop\Test1_EngineDysplay_Lights\flf_dysplay_engine_lights_v76.cfg</description>
+    </xinfo>
+    <xinfo>
+      <name>Configuration Comment</name>
+      <description></description>
+    </xinfo>
+    <xinfo>
+      <name>Test Module Name</name>
+      <description>Test 1</description>
+    </xinfo>
+    <xinfo>
+      <name>Test Module File</name>
+      <description>C:\Users\crd\Desktop\Test1_EngineDysplay_Lights\test1.can</description>
+    </xinfo>
+    <xinfo>
+      <name>Last modification of Test Module File</name>
+      <description>2012-05-22, 16:47:55</description>
+    </xinfo>
+    <xinfo>
+      <name>Windows Computer Name</name>
+      <description>NBCRD</description>
+    </xinfo>
+    <xinfo>
+      <name>Nodelayer Module J1939TestServiceLibraryNL</name>
+      <description>J1939 Test Service Library for CANoe, Version 1.11.10, C:\Program Files (x86)\Vector CANoe 7.6\Exec32\J1939TestServiceLibraryNL.dll</description>
+    </xinfo>
+    <xinfo>
+      <name>Nodelayer Module CANOEILNLDEFAULT</name>
+      <description>CANoe Interaction Layer NL (Default) Version 2.13.18 (Jun 28 2011 13:59:56) , C:\Program Files (x86)\Vector CANoe 7.6\Exec32\CANOEILNLDEFAULT.DLL</description>
+    </xinfo>
+  </testsetup>
+</testmodule>
+<!--footprint="70ec16a36d2125fca595711d629b7809" version="1"-->
